@@ -1,88 +1,124 @@
-# huggingface-template
+# JaLeCon Baseline
 
-Huggingfaceで適当に何かしたいときのテンプレート．
+This is a reproduction of the model for JaLeCon which is introduced by the following [paper](https://aclanthology.org/2023.bea-1.40):
 
-- モデルの定義とDatasetの定義を書くだけ
-- AccelerateによるマルチGPUでの訓練に対応．
-- 継続した訓練に対応．例えば，一旦5エポック目まで訓練して保存されたモデルがあったとき，それを読み込んで，エポックや最小lossの情報を維持しながら6エポック目以降を訓練可能．
-
-### どこ変えたらいいの
-
-次の2つのファイルを自分用に書き換えたら，単純なものはほとんど実装できるはず．
-
-- `modeling.py`  
-モデルの定義を書く．モデルの`forward()`ではModelOutputクラスのインスタンスが返り値になっている．train.pyではこのクラスのメンバ変数`.loss`を使うことになるので，必ずModelOutputクラスのlossに値を入れて返すようにする．
-
-- `dataset.py`  
-Datasetクラスと，`generate_dataset()`関数が定義されている．
-タスクに応じてDatasetクラスを書き換えて，手元のデータのフォーマットに応じて`generate_dataset()`を書き換えるイメージ．
-  
-Datasetクラスはよくある`__len__()`と`__getitem__()`を定義するもの．  
-`generate_dataset()`は，データのファイルのパスを入力とし，Datasetのインスタンスを返す関数．
-
-※ ベースの実装はローカルのファイルからデータを読み込むことを想定したものになっている．Huggingface datasetsから読み込む場合に対応していないが，おそらく大した修正にはならないはず（普段使わないのでよく分からない）．
-
-### 訓練中の表示
-モデルの訓練が回っているときには，tqdmによるプログレスが表示される．
-
-フォーマットの例を次に示す．
-```
-[Epoch 0] [TRAIN]:  12%|█▏        | 520/4387 [02:31<20:56,  3.08it/s, loss=2.56, lr=7.8e-6]
-もしくは
-[Epoch 2] [VALID]:  17%|█▋        | 3/18 [00:00<00:01,  9.66it/s, loss=1.83]
-```
-のようになっている．現状のエポックと，訓練データか開発データのどちらを処理中か，ミニバッチ単位の損失はいくらか，現在の学習率はいくらか，を知ることができる．学習率を表示しているのは，learning rate schedulerが所望の通りに動作しているかを確認できれば嬉しいかなという動機からである．
-
-
-### 訓練の結果はどうやって保存されるの
-訓練済みモデルは2種類保存される．開発データで最小lossを達成したcheckpointである`best/`と，指定のエポック終了時点のcheckpointである`last/`が保存される．ファイルはモデルによって変わるとは思う．
-
-`my_config.json`には，訓練を実行した際のargparseの情報が含まれているため，どのようなオプション（入力データのパス・シード値など）で訓練を実行したかを後から確認可能である．
-
-```
-model/
-├── best
-│   ├── config.json
-│   ├── lr.bin
-│   ├── merges.txt
-│   ├── my_config.json
-│   ├── pytorch_model.bin
-│   ├── special_tokens_map.json
-│   ├── tokenizer_config.json
-│   ├── tokenizer.json
-│   └── vocab.json
-├── last
-│   ├── 上に同じ
-└── log.json
-```
-
-また，`best/`や`last/`と同じ階層に`log.json`が保存される．これは訓練データおよび開発データに対するlossを示した簡単なサマリである．
-```json
-// 例
-{
-    "Epoch 0": {
-        "train_log": {
-            "loss": 2.3448873911573482
-        },
-        "valid_log": {
-            "loss": 1.7927383250660367
-        }
-    },
-    // ...<中略>...
-    "Epoch 4": {
-        "train_log": {
-            "loss": 2.0223096971879224
-        },
-        "valid_log": {
-            "loss": 1.7126508156458538
-        }
-    }
+```bibtex
+@inproceedings{ide-etal-2023-japanese,
+    title = "{J}apanese Lexical Complexity for Non-Native Readers: A New Dataset",
+    author = "Ide, Yusuke  and
+      Mita, Masato  and
+      Nohejl, Adam  and
+      Ouchi, Hiroki  and
+      Watanabe, Taro",
+    booktitle = "Proceedings of the 18th Workshop on Innovative Use of NLP for Building Educational Applications (BEA 2023)",
+    month = jul,
+    year = "2023",
+    address = "Toronto, Canada",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.bea-1.40",
+    doi = "10.18653/v1/2023.bea-1.40",
+    pages = "477--487"
 }
 ```
 
-### 訓練したモデルをどうやって読み込むの
+# Install
 
-`best/`や`last/`のディレクトリに生成されるファイルは，`my_config.json`を除いてHuggingfaceの標準的な命名に従う．したがって，トークナイザは`AutoTokenizer.from_pretrained()`に直接ディレクトリのパスを渡せば読み込める．
+```sh
+pip install torch transformers accelerate
+git clone https://github.com/naist-nlp/jalecon.git dataset
+```
 
-モデルについても，`modeling.py`を見ればわかるように，クラスメソッドの`from_pretrained()`が定義されている．これにより，`BertModel`などのHuggingface標準のモデルと同じインターフェイスで読み込むことが可能である（`save_pretrained()`も同様）．
+After this, the directory structure looks like this:
+```
+jalecon_baseline/
+├── dataset
+│   ├── ck.txt
+│   ├── cv_splits.json
+│   ├── LICENSE
+│   ├── mwe_list
+│   ├── non_ck.txt
+│   └── README.md
+├── modeling.py
+├── train.py
+....
+```
 
+# Train
+
+```sh
+accelerate launch train.py \
+    --input_file dataset/ck.txt \
+    --outdir models/sample \
+    --cv_split 1
+```
+
+- `--input_file` can be either `dataset/ck.txt` or `dataset/non_ck.txt`
+- `--cv_split` can be one of 1, 2, 3, 4, and 5. This is the index of the split in `dataset/cv_split.json`.
+
+Most of configurations is already set the official one (as mentioned in Appendix G Experimental Setting in the paper). However, we use "constant" setting for the learning rate scheduler while the official uses linear decay (because it is not clear what factor and iteration are used).
+
+### Evalaution
+
+The training script also has evaluation scripts.  
+After training, please refer to `<--outdir>/log.json`. It has "evaluation" value that contains like this:
+```json
+"evaluation": {
+    "R2": 0.43230069464738186,
+    "MAE": {
+        "Zero": 0.0035927612345890317,
+        "Easy": 0.07501028705967677,
+        "Not Easy": 0.2129422956611961,
+        "Difficult": 0.3131373669538233
+    }
+}
+```
+`"R2"` is a coefficient of determination and `"MAE"` is MAE by gold complexity score tier.
+
+# Usage as API
+
+The model is trained with `BertForSequenceClassification` as a regression task (i.e. num_labels=1).
+
+- Please encode the sentence carefully. Our trained models assume that the input sentence is the format as described in the [paper](https://aclanthology.org/2023.bea-1.40/).
+    - Surround the target token with `<unused0>` and `<unused1>`.
+    - Pass sentence and target token to the tokenizer as two arguments to obtain `token_type_ids` appropriately.
+    
+- In addition, do not forget to pass the output logits to sigmoid function.
+
+### Example
+```python
+from transformers import BertForSequenceClassification, AutoTokenizer
+import torch
+path = '<--outdir>'
+model = BertForSequenceClassification.from_pretrained(path)
+model.eval()
+tokenizer = AutoTokenizer.from_pretrained(path)
+# This example uses the first instance of https://github.com/naist-nlp/jalecon/blob/main/ck.txt.
+src = 'Q：今回長官に就任されましたが、<unused0>とりわけ<unused1>在任中に成し遂げたいことなどの抱負をお聞かせください。'
+target_tokens = 'とりわけ'
+encode = tokenizer(src, target_tokens, return_tensors='pt')
+with torch.no_grad():
+    outputs = model(**encode)
+complexity = torch.sigmoid(outputs.logits)
+print(complexity.view(-1).cpu().tolist())
+```
+
+# Performances obtained
+
+We performed expriments on both CK and non-CK datasets for five splits.  
+The following results is their average score.
+
+Non-CK results are competitive with the results of the paper, but CK is a little low.
+
+### CK
+
+||Zero|Easy|Not easy|(Very) Difficult|R2|
+|:--|:-:|:-:|:-:|:-:|:-:|
+|Paper|0.0034|0.0676|0.1913|0.2954|0.4351|
+|Ours|0.0033|0.0742|0.2154|0.3562|0.3272|
+
+### Non-CK
+
+||Zero|Easy|Not easy|(Very) Difficult|R2|
+|:--|:-:|:-:|:-:|:-:|:-:|
+|Paper|0.0066|0.0510|0.1169|0.2932|0.6142|
+|Ours|0.0058|0.0508|0.1215|0.3032|0.6030|
