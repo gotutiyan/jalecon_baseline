@@ -22,15 +22,15 @@ This is a reproduction of the model for JaLeCon which is introduced by the follo
 ```
 
 # Install
-
+Confirmed that it works on python 3.8.10.
 ```sh
-pip install torch transformers accelerate
+pip install -r requirements.txt
 git clone https://github.com/naist-nlp/jalecon.git dataset
 ```
 
 After this, the directory structure looks like this:
 ```
-jalecon_baseline/
+jalecon_baseline
 ├── dataset
 │   ├── ck.txt
 │   ├── cv_splits.json
@@ -38,9 +38,11 @@ jalecon_baseline/
 │   ├── mwe_list
 │   ├── non_ck.txt
 │   └── README.md
+├── dataset.py
+├── LICENSE
 ├── modeling.py
-├── train.py
-....
+├── README.md
+└── train.py
 ```
 
 # Train
@@ -55,24 +57,22 @@ accelerate launch train.py \
 - `--input_file` can be either `dataset/ck.txt` or `dataset/non_ck.txt`
 - `--cv_split` can be one of 1, 2, 3, 4, and 5. This is the index of the split in `dataset/cv_split.json`.
 
-Most of configurations is already set the official one (as mentioned in Appendix G Experimental Setting in the paper). However, we use "constant" setting for the learning rate scheduler while the official uses linear decay (because it is not clear what factor and iteration are used).
-
 ### Evalaution
 
 The training script also has evaluation scripts.  
 After training, please refer to `<--outdir>/log.json`. It has "evaluation" value that contains like this:
 ```json
 "evaluation": {
-    "R2": 0.43230069464738186,
+    "R2": 0.3909226117501584,
     "MAE": {
-        "Zero": 0.0035927612345890317,
-        "Easy": 0.07501028705967677,
-        "Not Easy": 0.2129422956611961,
-        "Difficult": 0.3131373669538233
+        "Zero": 0.0034583500462579274,
+        "Easy": 0.06634619035699134,
+        "Not Easy": 0.18918060780475465,
+        "Difficult": 0.3481951270077843
     }
 }
 ```
-`"R2"` is a coefficient of determination and `"MAE"` is MAE by gold complexity score tier.
+`"R2"` is a coefficient of determination and `"MAE"` is the MAE by gold complexity score tier.
 
 # Usage as API
 
@@ -114,11 +114,11 @@ Non-CK results are competitive with the results of the paper, but CK is a little
 ||Zero|Easy|Not easy|(Very) Difficult|R2|
 |:--|:-:|:-:|:-:|:-:|:-:|
 |Paper|0.0034|0.0676|0.1913|0.2954|0.4351|
-|Ours|0.0033|0.0742|0.2154|0.3562|0.3272|
+|Ours|0.0034|0.0721|0.2170|0.3479|0.3216|
 
 ### Non-CK
 
 ||Zero|Easy|Not easy|(Very) Difficult|R2|
 |:--|:-:|:-:|:-:|:-:|:-:|
 |Paper|0.0066|0.0510|0.1169|0.2932|0.6142|
-|Ours|0.0058|0.0508|0.1215|0.3032|0.6030|
+|Ours|0.0059|0.0503|0.1201|0.3043|0.6024|
