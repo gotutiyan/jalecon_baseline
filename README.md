@@ -28,7 +28,7 @@ pip install -r requirements.txt
 git clone https://github.com/naist-nlp/jalecon.git dataset
 ```
 
-After this, the directory structure looks like this:
+After that, the directory structure looks like the following:
 ```
 jalecon_baseline
 ├── dataset
@@ -57,9 +57,9 @@ accelerate launch train.py \
 - `--input_file` can be either `dataset/ck.txt` or `dataset/non_ck.txt`
 - `--cv_split` can be one of 1, 2, 3, 4, and 5. This is the index of the split in `dataset/cv_split.json`.
 
-### Evalaution
+### Evaluation
 
-The training script also has evaluation scripts.  
+The training script includes evaluation scripts.  
 After training, please refer to `<--outdir>/log.json`. It has "evaluation" value that contains like this:
 ```json
 "evaluation": {
@@ -78,11 +78,10 @@ After training, please refer to `<--outdir>/log.json`. It has "evaluation" value
 
 The model is trained with `BertForSequenceClassification` as a regression task (i.e. num_labels=1).
 
-- Please encode the sentence carefully. Our trained models assume that the input sentence is the format as described in the [paper](https://aclanthology.org/2023.bea-1.40/).
+- Please encode a sentence carefully. Our trained models assume that sentences are entered in the format described in the [paper](https://aclanthology.org/2023.bea-1.40/).
     - Surround the target token with `<unused0>` and `<unused1>`.
-    - Pass sentence and target token to the tokenizer as two arguments to obtain `token_type_ids` appropriately.
-    
-- In addition, do not forget to pass the output logits to sigmoid function.
+    - Pass the sentence and the target token to the tokenizer as two arguments to obtain `token_type_ids` appropriately.
+- Pass the output logits to sigmoid function.
 
 ### Example
 ```python
@@ -98,14 +97,14 @@ target_tokens = 'とりわけ'
 encode = tokenizer(src, target_tokens, return_tensors='pt')
 with torch.no_grad():
     outputs = model(**encode)
-complexity = torch.sigmoid(outputs.logits)
-print(complexity.view(-1).cpu().tolist())
+complexity = torch.sigmoid(outputs.logits).view(-1).cpu().tolist()
+print(complexity)
 ```
 
 # Performances obtained
 
 We performed expriments on both CK and non-CK datasets for five splits.  
-The following results is their average score.
+The following results are their average score.
 
 Non-CK results are competitive with the results of the paper, but CK is a little low.
 
