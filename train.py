@@ -14,8 +14,7 @@ from accelerate import Accelerator
 import numpy as np
 import random
 from typing import List
-from model_baseline.modeling import WrapperForTrain
-from model_baseline.dataset import generate_dataset, Dataset
+from dataset import generate_dataset
 
 def R2(ref: List[float], hyp: List[float]) -> float:
     mean_r = sum(ref) / len(ref)
