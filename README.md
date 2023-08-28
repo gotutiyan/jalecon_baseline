@@ -1,6 +1,6 @@
 # JaLeCon Baseline
 
-This is a reproduction of the model for JaLeCon which is introduced by the following [paper](https://aclanthology.org/2023.bea-1.40):
+This is a reproduction of the baseline model for JaLeCon which is introduced by the following [paper](https://aclanthology.org/2023.bea-1.40):
 
 ```bibtex
 @inproceedings{ide-etal-2023-japanese,
@@ -40,7 +40,6 @@ jalecon_baseline
 │   └── README.md
 ├── dataset.py
 ├── LICENSE
-├── modeling.py
 ├── README.md
 └── train.py
 ```
@@ -60,7 +59,7 @@ accelerate launch train.py \
 ### Evaluation
 
 The training script includes evaluation scripts.  
-After training, please refer to `<--outdir>/log.json`. It has "evaluation" value that contains like this:
+After training, please refer to `<--outdir>/log.json`. It has "evaluation" value that contains scores on the validation:
 ```json
 "evaluation": {
     "R2": 0.3909226117501584,
@@ -78,26 +77,27 @@ After training, please refer to `<--outdir>/log.json`. It has "evaluation" value
 
 The model is trained with `BertForSequenceClassification` as a regression task (i.e. num_labels=1).
 
-- Please encode a sentence carefully. Our trained models assume that sentences are entered in the format described in the [paper](https://aclanthology.org/2023.bea-1.40/).
+- Please encode input sentences carefully. Our trained models assume that the sentences are entered in the format described in the [paper](https://aclanthology.org/2023.bea-1.40/).
     - Surround the target token with `<unused0>` and `<unused1>`.
     - Pass the sentence and the target token to the tokenizer as two arguments to obtain `token_type_ids` appropriately.
-- Pass the output logits to sigmoid function.
+- Use torch.clip() for the final logits and fix the range to [0, 1]. This slightly improves the performance.
 
 ### Example
 ```python
 from transformers import BertForSequenceClassification, AutoTokenizer
 import torch
 path = '<--outdir>'
-model = BertForSequenceClassification.from_pretrained(path)
+model = BertForSequenceClassification.from_pretrained(path).cuda()
 model.eval()
 tokenizer = AutoTokenizer.from_pretrained(path)
 # This example uses the first instance of https://github.com/naist-nlp/jalecon/blob/main/ck.txt.
 src = 'Q：今回長官に就任されましたが、<unused0>とりわけ<unused1>在任中に成し遂げたいことなどの抱負をお聞かせください。'
 target_tokens = 'とりわけ'
 encode = tokenizer(src, target_tokens, return_tensors='pt')
+encode = {k:v.cuda() for k,v in encode.items()}
 with torch.no_grad():
     outputs = model(**encode)
-complexity = torch.sigmoid(outputs.logits).view(-1).cpu().tolist()
+complexity = torch.clip(outputs.logits, min=0, max=1).view(-1).cpu().tolist()
 print(complexity)
 ```
 
@@ -106,18 +106,18 @@ print(complexity)
 We performed expriments on both CK and non-CK datasets for five splits.  
 The following results are their average score.
 
-Non-CK results are competitive with the results of the paper, but CK is a little low.
+Non-CK results are competitive with the results of the paper, but CK is a little low score.
 
 ### CK
 
 ||↓Zero|↓Easy|↓Not easy|↓(Very) Difficult|↑R2|
 |:--|:-:|:-:|:-:|:-:|:-:|
 |Paper|0.0034|0.0676|0.1913|0.2954|0.4351|
-|Ours|0.0034|0.0721|0.2170|0.3479|0.3216|
+|Ours|0.0029|0.0658|0.1974|0.2952|0.4084|
 
 ### Non-CK
 
 ||↓Zero|↓Easy|↓Not easy|↓(Very) Difficult|↑R2|
 |:--|:-:|:-:|:-:|:-:|:-:|
 |Paper|0.0066|0.0510|0.1169|0.2932|0.6142|
-|Ours|0.0059|0.0503|0.1201|0.3043|0.6024|
+|Ours|0.0060|0.0506|0.1151|0.2892|0.6146|
