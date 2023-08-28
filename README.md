@@ -110,14 +110,14 @@ Non-CK results are competitive with the results of the paper, but CK is a little
 
 ### CK
 
-||Zero|Easy|Not easy|(Very) Difficult|R2|
+||↓Zero|↓Easy|↓Not easy|↓(Very) Difficult|↑R2|
 |:--|:-:|:-:|:-:|:-:|:-:|
 |Paper|0.0034|0.0676|0.1913|0.2954|0.4351|
 |Ours|0.0034|0.0721|0.2170|0.3479|0.3216|
 
 ### Non-CK
 
-||Zero|Easy|Not easy|(Very) Difficult|R2|
+||↓Zero|↓Easy|↓Not easy|↓(Very) Difficult|↑R2|
 |:--|:-:|:-:|:-:|:-:|:-:|
 |Paper|0.0066|0.0510|0.1169|0.2932|0.6142|
 |Ours|0.0059|0.0503|0.1201|0.3043|0.6024|
